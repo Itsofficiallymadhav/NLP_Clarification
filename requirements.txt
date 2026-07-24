@@ -1,0 +1,7 @@
+datasets==5.0.0
+fsspec==2026.4.0
+huggingface-hub==1.24.0
+jupyter==1.1.1
+torch==2.13.0
+tqdm==4.69.0
+transformers==5.14.1
