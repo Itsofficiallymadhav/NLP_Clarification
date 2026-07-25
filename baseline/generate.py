@@ -1,6 +1,8 @@
 import torch
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
+from evaluation.evaluator import extract_code
+import ast
 
 MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 
@@ -10,9 +12,8 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 print("Loading model...")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    torch_dtype=torch.float16,
-    device_map="auto"
-)
+    torch_dtype=torch.float16
+).to("cuda")
 
 print("Model loaded!")
 
@@ -34,7 +35,7 @@ Problem:
 IMPORTANT: Respond with ONLY a single Python code block. Do not include any explanation, reasoning, or text before or after the code block."""
 
 
-def generate(prompt, test_example=None):
+def generate(prompt, test_example=None, temperature=0.2, do_sample=False, top_p=0.95):
     prompt = build_prompt(prompt, test_example)
     messages = [
         {
@@ -54,11 +55,20 @@ def generate(prompt, test_example=None):
         return_tensors="pt"
     ).to(model.device)
 
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=512,
-        temperature=0.2
-    )
+    gen_kwargs = {
+        "max_new_tokens": 512,
+    }
+
+    if do_sample:
+        gen_kwargs.update({
+            "do_sample": True,
+            "temperature": temperature,
+            "top_p": top_p,
+        })
+    else:
+        gen_kwargs["do_sample"] = False  # greedy, deterministic
+
+    outputs = model.generate(**inputs, **gen_kwargs)
 
     generated = tokenizer.decode(
         outputs[0],
@@ -66,3 +76,15 @@ def generate(prompt, test_example=None):
     )
 
     return generated
+
+
+def filter_invalid(candidates):
+    """Remove candidates that don't parse as valid Python."""
+    valid = []
+    for code in candidates:
+        try:
+            ast.parse(code)
+            valid.append(code)
+        except SyntaxError:
+            continue
+    return valid
