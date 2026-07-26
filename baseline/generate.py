@@ -1,10 +1,18 @@
 import torch
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
+from transformers import BitsAndBytesConfig
 from evaluation.evaluator import extract_code
 import ast
 
-MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+)
 
 print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -12,8 +20,9 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 print("Loading model...")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    torch_dtype=torch.float16
-).to("cuda")
+    quantization_config=bnb_config,
+    device_map="auto"
+)
 
 print("Model loaded!")
 
