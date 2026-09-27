@@ -1,30 +1,23 @@
 # Clarification Codegen
 
-An interactive code-generation pipeline that improves LLM code accuracy on
-ambiguous prompts by asking executable clarification questions, adapted from
-["20 Questions for Code" (Garg, Kim, Xi)](reference paper). Compares one-shot
-baseline generation against an EIG-based (expected information gain)
-clarification loop on the MBPP dataset.
+This project helps AI write better code when the instructions are vague. Instead of just guessing, the system asks questions first to figure out what you actually mean. 
+
+It's based on a paper called "20 Questions for Code". I wanted to see what happens when the AI just guesses the answer in one go versus when it asks smart questions to gather more info, using a standard set of Python problems (the MBPP dataset).
 
 ## Project status
 
-All three phases are implemented and validated:
+All four parts of the project are up and running:
 
-- **Phase 1 — Baseline:** One-shot code generation + custom evaluation harness.
-- **Phase 2 — Ambiguity analysis:** Sample diverse candidate solutions per
-  problem, detect genuine ambiguity via output disagreement on real test inputs.
-- **Phase 3 — Clarification:** EIG-based scoring of candidate clarification
-  questions, Bayesian belief updates, ask-or-submit stopping rule.
+- **Part 1: Baseline:** Asking the AI to write the code in one try, plus a custom way to test if it works.
+- **Part 2: Finding Ambiguity:** Making the AI write a few different answers for the same problem. If those answers act differently on our tests, we know the original prompt was confusing.
+- **Part 3: Clarification:** A smart loop where the AI figures out the best questions to ask, updates what it knows based on your answers, and decides when it has enough info to just write the code.
+- **Part 4: Human-guided Oracle:** A fully interactive version. A real person answers the AI's yes/no questions, the AI updates its choices based on those answers, and then we test the final program.
 
-**Headline result:** on 61 MBPP problems flagged as ambiguous, EIG-based
-clarification improves pass@1 from 50.8% (one-shot baseline) to 78.7%
-(+27.9 points), using an average of 1.77 clarification questions per problem.
-See `notebooks/phase3.ipynb` for full results, methodology, and known
-limitations.
+**The main result:** On 61 problems that were flagged as confusing, asking questions boosted the AI's success rate from 50.8% (guessing) to 78.7%! It only needed to ask about 1.8 questions per problem on average. You can see all the details in `notebooks/phase3.ipynb`.
 
 ## Setup
 
-Use Python 3.11, then install the project dependencies:
+Use Python 3.11, and set up your virtual environment like this:
 
 ```powershell
 python -m venv .venv
@@ -32,54 +25,73 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-**Important — GPU/CUDA:** `pip install torch` alone can silently install a
-CPU-only build with no error, causing extremely slow generation. Verify after
-install:
+**Watch out for the GPU setup:** Sometimes installing PyTorch gives you the CPU-only version without warning, which makes everything super slow. Check it like this:
 ```python
 import torch
-print(torch.cuda.is_available())  # should be True
+print(torch.cuda.is_available())  # This should be True
 ```
-If `False`, reinstall with the correct CUDA build for your GPU driver:
+If it says `False`, you need to reinstall it for your GPU (like CUDA 12.1):
 ```powershell
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 ```
 
-**Hugging Face authentication:** the 7B model is a ~15GB download and Hugging
-Face throttles unauthenticated requests heavily. Log in once before running
-any notebook:
+**Downloading the AI:** The larger model is a 15GB download. Hugging Face will slow you way down if you aren't logged in, so just log in once before running anything:
 ```powershell
 huggingface-cli login
 ```
-Do not hardcode tokens in notebooks — they get committed to git history.
+*(Note: Please don't hardcode your login tokens in the notebooks, or they'll end up in the git history!)*
 
 ## Models
 
-- `Qwen/Qwen2.5-Coder-1.5B-Instruct` — used for initial Phase 1/2 validation.
-- `Qwen/Qwen2.5-Coder-7B-Instruct` (4-bit quantized via `bitsandbytes`) — used
-  for all final reported results. Switched from 1.5B after observing that a
-  meaningful share of Phase 2's candidate disagreement was caused by runtime
-  crashes and basic errors rather than genuine ambiguity; 7B produces
-  cleaner, crash-free disagreement signal. See `notebooks/phase3.ipynb` for
-  the full comparison.
+- `Qwen/Qwen2.5-Coder-1.5B-Instruct` -> I used this smaller one to test things out early on.
+- `Qwen/Qwen2.5-Coder-7B-Instruct` -> This is the main one I used for the final results (I shrank it a bit so it uses less memory). I switched to this bigger model because the smaller one kept making basic coding mistakes and crashing. The bigger one writes cleaner code, making it easier to tell when it's *actually* confused by the prompt rather than just making a typo. 
 
 ## How to run
 
-- `notebooks/baseline.ipynb` — Phase 1: downloads MBPP, generates one-shot
-  solutions, evaluates against hidden tests.
-- `notebooks/phase3.ipynb` — Phases 2 and 3: candidate generation, ambiguity
-  detection, EIG-based clarification loop, and final results summary. This
-  is the primary notebook for reproducing reported results.
+- `notebooks/baseline.ipynb` - **Part 1:** Downloads the problems, asks the AI to solve them in one try, and tests the answers.
+- `notebooks/phase3.ipynb` - **Parts 2 and 3:** Generates different answers, spots the confusing parts, runs the question-asking loop, and shows the final results. Run this notebook to see the main findings.
+- `notebooks/phase4_human_oracle.ipynb` - **Part 4:** Lets a person answer the clarification questions and tests the selected answer. It also includes a custom Codeforces-style problem.
 
-Downloaded data, model artifacts, and run results are kept out of version
-control. Result JSONs saved by the notebooks (`results/*.json`) are also
-gitignored due to size; rerun the notebooks to regenerate them.
+The testing script is in `evaluation/evaluator.py`. It pulls the Python code out of the AI's response, runs any setup stuff, and tests the code. It also gives helpful error messages instead of just failing silently.
+
+## The human-guided oracle example
+
+The Part 4 notebook includes a classic competitive programming problem (`cf_1097b`). The goal is to see if you can spin a dial clockwise or counterclockwise by certain angles so that it ends up exactly where it started (a multiple of 360 degrees).
+
+The notebook gives the AI a few basic examples like:
+
+- `[10, 20, 30]` -> `True`
+- `[10, 10, 10]` -> `False`
+- `[120, 120, 120]` -> `True`
+
+After the AI asks its questions, we test it on trickier cases it hasn't seen yet:
+
+- `[180]` -> `False`
+- `[90, 90, 90, 90]` -> `True`
+
+This proves the question-asking loop doesn't just work on the standard dataset—you can use it for your own custom algorithmic problems and tests too!
+
+## Project report
+
+The formal write-up (a LaTeX report) is in the `report/` folder. It explains the main ideas from the original paper, how my version is different, the results, and the interactive Codeforces example.
+
+The finished PDF is `report/main.pdf`. If you want to rebuild the PDF on Windows, just install MiKTeX or TeX Live and run:
+
+```powershell
+cd C:\Clarification-Codegen\report
+.\build.ps1
+```
+
+For a clean rebuild:
+
+```powershell
+.\build.ps1 -Clean
+```
+
+I didn't upload the big datasets, AI models, or the final result files (`results/*.json`) to GitHub because they are way too huge. Just run the notebooks yourself to generate them!
 
 ## Known limitations
 
-- Clarification questions are drawn from Phase 2's candidate-disagreement
-  data rather than generated by the LLM as a separate step (a deliberate
-  scoping simplification — see `notebooks/phase3.ipynb` for details).
-- Candidates returning custom class instances without `__repr__` can produce
-  spurious disagreement in Phase 2's comparison logic.
-- The oracle used to answer clarification questions is the MBPP reference
-  solution, not a live human (matching the reference paper's own setup).
+- To keep things simple, the questions the AI asks are pulled from the differences in its own code, rather than having the AI write the questions completely from scratch.
+- If the AI writes code that uses custom objects (without a basic string representation), the testing script sometimes gets confused and thinks the answers are different when they aren't.
+- In the automated experiments, the "person" answering the questions is just the dataset's answer key. But the Part 4 notebook provides a real interactive mode where *you* can answer the questions yourself.
