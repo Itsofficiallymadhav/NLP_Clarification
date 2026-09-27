@@ -1,0 +1,17 @@
+{
+  "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+  "dataset": "mbpp",
+  "split": "test",
+  "method": "eig",
+  "n": 25,
+  "SHOW_EXAMPLE": true,
+  "N_CANDIDATES": 8,
+  "M_TESTS": 8,
+  "K_MAX": 4,
+  "EPS": 0.02,
+  "GAMMA": 0.85,
+  "ETA": 0.5,
+  "LAMBDA": 0.5,
+  "RHO": 0.5,
+  "MIN_COVERAGE": 0.5
+}
