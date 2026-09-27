@@ -1,0 +1,47 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{enumitem}
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+\title{An EIG-Inspired Clarification Pipeline for Code Generation}
+\author{Priyangshu Mandal}
+\date{September 2026}
+
+\begin{document}
+
+\maketitle
+\begin{center}
+Repository: \url{https://github.com/Itsofficiallymadhav/NLP_Clarification/tree/priyangshu-mandal}
+\end{center}
+\tableofcontents
+
+\begin{abstract}
+This report documents a repository-level implementation based on \emph{20 Questions for Code: Improving Code Generation with Information-Theoretic Clarification} \cite{garg2026twenty}. The source paper proposes sampling candidate programs, selecting executable clarification tests by expected information gain (EIG), querying an oracle, and updating candidate beliefs before submitting code. This project implements a smaller MBPP-focused version of that idea: it samples eight candidates, extracts disagreement probes from existing MBPP tests, supports up to four clarification questions, and includes both an automated and a human-guided oracle path. The strongest stored baseline run passes 42 of 50 tasks (84.0\%), while the strongest stored clarification run passes 20 of 21 tasks (95.2\%). These runs are not paired experiments, so the comparison is descriptive rather than a causal estimate.
+\end{abstract}
+
+\newpage
+
+\section{Introduction}
+\input{sections/introduction}
+
+\section{Method}
+\input{sections/method}
+
+\section{Results}
+\input{sections/results}
+
+\section{Conclusion}
+\input{sections/conclusion}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

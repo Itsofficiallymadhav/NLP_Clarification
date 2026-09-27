@@ -1,0 +1,31 @@
+\subsection{Dataset and task representation}
+
+Each MBPP example contains a problem description, a list of tests, optional setup code, and a task identifier \cite{austin2021program}. A generated response is first reduced to Python source by extracting a fenced code block when present. The evaluator then executes the optional setup code, the generated candidate, and each assertion in a shared namespace.
+
+\subsection{Baseline generation}
+
+The main generation implementation uses \texttt{Qwen2.5-Coder-7B-Instruct} with 4-bit quantization. The prompt asks for a single Python code block and may include the first MBPP test as an additional behavioral constraint. The recorded baseline artifacts include runs of 20, 30, and 50 tasks. Because these files were created at different stages and with different selections, they are reported separately.
+
+\subsection{Candidate sampling and ambiguity detection}
+
+For each task in the clarification pipeline, the system samples eight candidate programs at a nonzero temperature. Invalid Python is discarded, and candidates are deduplicated by their outputs on literal probe inputs extracted from the MBPP assertions. A probe input is considered informative when valid candidates produce more than one output group. This makes ambiguity operational: it is disagreement among executable candidates, not merely uncertainty in the model's text. Unlike the source paper, the current repository does not generate a separate pool of clarification tests from scratch; it derives questions from observed candidate disagreement.
+
+\subsection{EIG-inspired clarification and selection}
+
+For a candidate question $t$, each candidate program either agrees with the hypothesized output, disagrees, or produces an undefined/error outcome. Let $p_t$ be the weighted fraction of defined candidates that agree with the hypothesized output. The implemented base score follows the binary-entropy form used by the source paper:
+
+\[
+\operatorname{EIG}(t) = H_b\left(\epsilon + (1-2\epsilon)p_t\right) - H_b(\epsilon),
+\]
+
+where $H_b$ is binary entropy and $\epsilon=0.02$ models oracle noise. The repository then multiplies this quantity by defined-outcome weight, a balance bonus, and a penalty for undefined outcomes. With weights $w_j$, answers update softly: candidates consistent with the answer receive factor $1-\epsilon$, inconsistent candidates receive factor $\epsilon$, and undefined candidates receive factor $\eta=0.3$, followed by normalization. The ask-or-submit rule compares the expected post-question maximum weight against the current maximum using $\gamma=0.85$.
+
+The highest-scoring disagreement question is asked for at most four rounds. The automated oracle setting answers by executing the question against reference code when available. The human-guided oracle setting presents the same binary question to a person, records the answer, applies the same belief update, and evaluates the highest-weight candidate against the task's test list. These are two complete oracle modes for the same clarification loop.
+
+\subsection{Custom Codeforces-style task}
+
+To test whether the clarification workflow extends beyond MBPP-shaped prompts, the human-guided oracle notebook includes a Codeforces-style custom task, identified as \texttt{cf\_1097b}. The task asks whether a list of rotation angles can be assigned clockwise or counterclockwise directions so that the signed total is a multiple of $360$ degrees. The workflow generates eight candidate programs, measures disagreement using three public examples, asks up to four targeted binary questions when candidates diverge, and selects the highest-weight candidate. The selected program is then checked with additional cases, including a single $180$-degree rotation, which should return false, and four $90$-degree rotations, which should return true.
+
+\subsection{Evaluation}
+
+For each task, a result is recorded as a Boolean pass flag and an error string. A pass means that all provided assertions execute successfully. Runtime errors and assertion failures are retained for diagnosis. This is a functional correctness measure, not a measure of style, runtime efficiency, token cost, confidence calibration, or semantic similarity to the reference implementation. Consequently, this repository does not reproduce the source paper's full pass@1, token-efficiency, confidence-interval, or ablation claims.

@@ -1,0 +1,9 @@
+This repository implements a focused version of the information-theoretic clarification idea introduced in \emph{20 Questions for Code} \cite{garg2026twenty}. It covers the essential loop: candidate sampling, executable behavioral disagreement, EIG-inspired question scoring, soft belief updates, and final code evaluation. The stored results show that this loop can run end to end and select passing solutions on many tasks.
+
+The implementation remains narrower than the source paper. It uses standard MBPP rather than MBPP+, derives questions from existing tests rather than generating a full candidate test pool, and provides both automated and human-guided oracle evaluation modes. Its stored runs are exploratory and should not be presented as reproductions of the source paper's headline results.
+
+The custom Codeforces-style rotation task further demonstrates the intended scope of the workflow. By supplying its own public examples and additional hidden checks, it shows how candidate disagreement and human-guided clarification can be applied to an algorithmic problem outside the MBPP dataset.
+
+The next experiment should use a fixed task set and paired comparisons. For every task, run a one-shot baseline and the clarification method from the same candidate pool, record the number of questions, and report pass-rate differences with uncertainty across tasks. To move closer to the source paper, the project can add model-generated candidate tests, random-test and self-consistency baselines, token accounting, and confidence intervals while retaining the human-guided oracle mode as a complementary evaluation setting.
+
+Finally, the evaluator should remain isolated from the model-generation code and should preserve setup code, assertion failures, and runtime errors. This makes failures diagnosable and prevents improvements in reporting from being confused with improvements in generated-program correctness.

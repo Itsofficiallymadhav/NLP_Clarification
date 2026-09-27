@@ -1,0 +1,43 @@
+Automatic code generation systems can produce syntactically valid programs while still misunderstanding an underspecified requirement. The supplied source paper, \emph{20 Questions for Code}, studies this problem by treating clarification as an information-theoretic question-selection problem: sample plausible programs, ask executable yes/no tests that distinguish them, and use the answers to select a better program \cite{garg2026twenty}.
+
+This repository is a focused implementation and exploration of that idea. It is not a reproduction of every experiment in the source paper. The paper reports automated EIG experiments on HumanEval+ and MBPP+ with larger candidate and test pools, while this project uses the standard MBPP dataset, existing assertion-derived probes, and a human-guided oracle evaluation mode. The report therefore evaluates the implemented pipeline and labels these differences explicitly.
+
+The experiments use the Mostly Basic Python Problems (MBPP) benchmark, which contains natural-language programming tasks paired with reference tests \cite{austin2021program}. The central question is:
+
+\begin{quote}
+Can the source paper's EIG-based clarification idea be implemented over MBPP candidates, and can answers to focused output questions improve the final program selected for evaluation?
+\end{quote}
+
+The project is organized into four phases:
+\begin{enumerate}[leftmargin=*]
+	\item establish a one-shot code-generation baseline;
+	\item sample multiple candidates and measure behavioral ambiguity;
+	\item use an automated clarification loop to update candidate weights;
+	\item evaluate a human-guided oracle version of the clarification loop.
+\end{enumerate}
+
+The report summarizes the implemented pipeline and the experiment artifacts saved in the repository. The human-guided oracle mode is treated as a complete evaluation setting in which a person answers targeted binary questions, the candidate distribution is updated, and the selected program is checked against the task tests.
+
+\section{Relationship to the Source Paper}
+
+The source paper's central object is a posterior distribution over candidate programs. It generates candidate clarification tests, scores them by expected information gain and test quality, queries a reference implementation, and updates candidate weights with a soft Bayesian rule. The repository follows the same conceptual loop but narrows the implementation in several ways:
+
+\begin{table}[ht]
+\centering
+\caption{Scope differences between the source paper and this repository.}
+\label{tab:scope}
+\begin{tabular}{p{0.29\textwidth}p{0.29\textwidth}p{0.29\textwidth}}
+\toprule
+Aspect & Source paper & This repository \\
+\midrule
+Benchmarks & HumanEval+ and MBPP+ & Standard MBPP task splits \\
+Candidate generation & 16 candidates & 8 candidates \\
+Clarification tests & Model-generated test pool & Existing assertion-derived disagreement probes \\
+Oracle & Reference implementation & Automated oracle and human-guided oracle \\
+Question budget & Up to 4 in the reported configuration & Up to 4 \\
+Evaluation & pass@1 with broader test suites and cost analysis & Assertion execution with stored pass/error records \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The repository should therefore be described as an EIG-inspired implementation and exploratory reproduction, not as an independent implementation of all source-paper experiments.

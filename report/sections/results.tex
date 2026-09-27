@@ -1,0 +1,40 @@
+\subsection{Stored experiment results}
+
+Table~\ref{tab:results} summarizes the JSON artifacts currently stored under \texttt{results/}. The runs are intentionally shown separately because they do not all use the same task count or task selection.
+
+\begin{table}[ht]
+\centering
+\caption{Pass rates in the stored result artifacts.}
+\label{tab:results}
+\begin{tabular}{lrrr}
+\toprule
+Run & Tasks & Passed & Rate \\
+\midrule
+Baseline, 20-task artifact & 100 & 51 & 51.0\% \\
+Baseline, 7B, 30 tasks & 30 & 20 & 66.7\% \\
+Baseline, 7B, 50 new tasks & 50 & 33 & 66.0\% \\
+Baseline, 7B, 50 random tasks & 50 & 42 & 84.0\% \\
+Clarification, 15 ambiguous tasks & 15 & 8 & 53.3\% \\
+Clarification, 25-task run & 25 & 20 & 80.0\% \\
+Clarification, 21-task random run & 21 & 20 & 95.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The strongest stored clarification run has the highest observed pass rate, but it is based on 21 tasks and is not paired with the 50-task random baseline. Therefore, the result supports the feasibility of this EIG-inspired implementation, but it does not reproduce the source paper's benchmark claims or establish a controlled improvement attributable to clarification.
+
+\subsection{Ambiguity analysis}
+
+The phase-two artifacts show that several tasks have multiple executable behaviors among the sampled candidates. For example, task 603 produces six unique candidate behaviors and three disagreement points in the saved analysis. This is the type of case targeted by the source paper's method: multiple plausible interpretations can be exposed by asking about a concrete input and output. In this repository, those questions are drawn from existing MBPP assertions rather than generated as a standalone test-generation stage.
+
+\subsection{Interpretation}
+
+The stored results are useful as engineering evidence that the candidate-disagreement and weight-update loop runs end to end. They are not a direct comparison to the source paper's reported MBPP+ values. The task counts, task selections, candidate-generation settings, and evaluation suites differ, and the clarification artifacts are not consistently paired with a same-task one-shot baseline.
+
+\subsection{Human-guided oracle evaluation}
+
+The human-guided oracle setting provides a complete interactive evaluation workflow. It loads an ambiguous MBPP task and its candidate programs, selects a high-information input/output question, presents the binary clarification question to a person, updates the candidate weights from the answer, and evaluates the final selected program against the task tests. Each interaction records the task identifier, question inputs, hypothesized outputs, answers, scores, final candidate, final weights, and evaluation outcome. This setting makes the human oracle's role explicit while preserving the same candidate-ranking and EIG-inspired update procedure as the automated setting.
+
+\subsection{Codeforces-style case study}
+
+The notebook also applies the complete human-guided oracle workflow to the custom task \texttt{cf\_1097b}. The public examples include angle lists such as $[10,20,30]$, $[10,10,10]$, and $[120,120,120]$, with expected outcomes that distinguish valid signed-rotation combinations from invalid ones. After clarification, the selected candidate is evaluated on two additional checks: $[180]$ must return false because neither sign reaches $0$ modulo $360$, while $[90,90,90,90]$ must return true because four equal rotations sum to $360$. This case study demonstrates that the clarification loop is not tied to the MBPP dataset format; it can also operate on a custom algorithmic prompt with user-defined public and hidden tests.
